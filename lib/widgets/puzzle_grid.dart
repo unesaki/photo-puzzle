@@ -105,101 +105,135 @@ class _PuzzleGridState extends State<PuzzleGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final maxGridSize = MediaQuery.of(context).size.width * 0.9;
-    final pieceSize = maxGridSize / widget.gridSize;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final gridHeight = screenHeight * 2 / 3;
+    final pieceListHeight = screenHeight / 3;
+    final imageWidth = image?.width.toDouble() ?? screenWidth;
+    final imageHeight = image?.height.toDouble() ?? gridHeight;
+    final pieceWidth = screenWidth * 0.9 / widget.gridSize;
+    final pieceHeight = gridHeight / widget.gridSize;
 
     return Column(
       children: [
-        // Puzzle Grid
+        // Puzzle Grid - 上部2/3
         SizedBox(
-          width: maxGridSize,
-          height: maxGridSize,
-          child: GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: widget.gridSize,
-            ),
-            itemCount: widget.gridSize * widget.gridSize,
-            itemBuilder: (context, index) {
-              final expectedValue = index + 1;
-              final currentPiece = placedTiles[index];
+          height: gridHeight,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxBoardHeight = constraints.maxHeight; // 動的な高さ取得
+              final gridSize = widget.gridSize;
 
-              return DragTarget<int>(
-                onAccept: (data) {
-                  setState(() {
-                    placedTiles[index] = data;
-                    pieceList.remove(data);
-                    history.add(index);
-                  });
-                  _checkCompletion();
-                },
-                builder: (context, candidateData, rejectedData) {
-                  if (currentPiece == expectedValue) {
-                    // Correctly placed piece, not draggable
-                    return _buildImagePiece(index, currentPiece, true, pieceSize);
-                  } else if (currentPiece != null) {
-                    // Incorrectly placed piece, draggable
-                    return Draggable<int>(
-                      data: currentPiece,
-                      feedback: Material(
-                        child: _buildImagePiece(index, currentPiece, false, pieceSize),
-                      ),
-                      childWhenDragging: Container(
-                        width: pieceSize,
-                        height: pieceSize,
-                        color: Colors.grey,
-                      ),
-                      onDragCompleted: () {
-                        setState(() {
-                          placedTiles[index] = null;
-                        });
-                      },
-                      child: _buildImagePiece(index, currentPiece, false, pieceSize),
-                    );
-                  } else {
-                    // Empty spot
-                    return Container(
-                      width: pieceSize,
-                      height: pieceSize,
-                      margin: const EdgeInsets.all(1.0),
-                      color: Colors.grey,
-                    );
-                  }
-                },
+              // 元画像の縦横サイズ
+              final imgWidth = image?.width.toDouble() ?? 1;
+              final imgHeight = image?.height.toDouble() ?? 1;
+
+              // 元画像の縦横比
+              final imageAspectRatio = imgWidth / imgHeight;
+
+              // ピースの縦横サイズを調整（縦優先）
+              final pieceHeight = maxBoardHeight / gridSize;
+              final pieceWidth = pieceHeight * imageAspectRatio;
+
+              // 全体幅（超えた場合は縮小）
+              final boardWidth = pieceWidth * gridSize;
+
+              return Center(
+                child: SizedBox(
+                  height: maxBoardHeight,
+                  width: boardWidth,
+                  child: GridView.builder(
+                    padding: EdgeInsets.zero,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: gridSize,
+                      childAspectRatio: imageAspectRatio,
+                    ),
+                    itemCount: gridSize * gridSize,
+                    itemBuilder: (context, index) {
+                      final expectedValue = index + 1;
+                      final currentPiece = placedTiles[index];
+
+                      return DragTarget<int>(
+                        onAccept: (data) {
+                          setState(() {
+                            placedTiles[index] = data;
+                            pieceList.remove(data);
+                            history.add(index);
+                          });
+                          _checkCompletion();
+                        },
+                        builder: (context, candidateData, rejectedData) {
+                          if (currentPiece == expectedValue) {
+                            return _buildImagePiece(index, currentPiece, true, pieceWidth, pieceHeight);
+                          } else if (currentPiece != null) {
+                            return Draggable<int>(
+                              data: currentPiece,
+                              feedback: Material(
+                                child: _buildImagePiece(index, currentPiece, false, pieceWidth, pieceHeight),
+                              ),
+                              childWhenDragging: Container(
+                                width: pieceWidth,
+                                height: pieceHeight,
+                                color: Colors.grey,
+                              ),
+                              onDragCompleted: () {
+                                setState(() {
+                                  placedTiles[index] = null;
+                                });
+                              },
+                              child: _buildImagePiece(index, currentPiece, false, pieceWidth, pieceHeight),
+                            );
+                          } else {
+                            return Container(
+                              width: pieceWidth,
+                              height: pieceHeight,
+                              margin: const EdgeInsets.all(1.0),
+                              color: Colors.grey,
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
               );
             },
           ),
         ),
-        // Piece List
+        // Piece List - 下部1/3（最大5つ）
         SizedBox(
-          height: pieceSize + 20,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: pieceList.length,
-            itemBuilder: (context, index) {
-              return Draggable<int>(
-                data: pieceList[index],
-                feedback: Material(
-                  child: _buildImagePiece(index, pieceList[index], false, pieceSize),
-                ),
-                childWhenDragging: Container(
-                  width: pieceSize,
-                  height: pieceSize,
-                  color: Colors.grey,
-                ),
-                child: _buildImagePiece(index, pieceList[index], false, pieceSize),
-              );
-            },
+          height: pieceListHeight,
+          child: Center(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: pieceList.take(5).map((piece) {
+                return Draggable<int>(
+                  data: piece,
+                  feedback: Material(
+                    child: _buildImagePiece(0, piece, false, pieceWidth * 0.75, pieceHeight * 0.75),
+                  ),
+                  childWhenDragging: Container(
+                    width: pieceWidth * 0.75,
+                    height: pieceHeight * 0.75,
+                    color: Colors.grey,
+                  ),
+                  child: _buildImagePiece(0, piece, false, pieceWidth * 0.75, pieceHeight * 0.75),
+                );
+              }).toList(),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildImagePiece(int index, int? piece, bool isFixed, double pieceSize) {
-    if (image == null) {
+  Widget _buildImagePiece(int index, int? piece, bool isFixed, double pieceWidth, double pieceHeight) {
+    if (image == null || piece == null) {
       return Container(
-        width: pieceSize,
-        height: pieceSize,
+        width: pieceWidth,
+        height: pieceHeight,
         margin: const EdgeInsets.all(1.0),
         color: isFixed ? Colors.green : Colors.blueAccent,
         child: Center(
@@ -211,15 +245,26 @@ class _PuzzleGridState extends State<PuzzleGrid> {
       );
     }
 
-    final row = (piece! - 1) ~/ widget.gridSize;
+    final row = (piece - 1) ~/ widget.gridSize;
     final col = (piece - 1) % widget.gridSize;
 
+    final imgWidth = image!.width.toDouble();
+    final imgHeight = image!.height.toDouble();
+    final srcWidth = imgWidth / widget.gridSize;
+    final srcHeight = imgHeight / widget.gridSize;
+
     return CustomPaint(
-      size: Size(pieceSize, pieceSize),
+      size: Size(pieceWidth, pieceHeight),
       painter: _ImagePiecePainter(
         image: image!,
-        srcRect: Rect.fromLTWH(col * pieceSize, row * pieceSize, pieceSize, pieceSize),
+        srcRect: Rect.fromLTWH(
+          col * srcWidth,
+          row * srcHeight,
+          srcWidth,
+          srcHeight,
+        ),
         isFixed: isFixed,
+        targetSize: Size(pieceWidth, pieceHeight),
       ),
     );
   }
@@ -229,8 +274,14 @@ class _ImagePiecePainter extends CustomPainter {
   final ui.Image image;
   final Rect srcRect;
   final bool isFixed;
+  final Size targetSize;
 
-  _ImagePiecePainter({required this.image, required this.srcRect, required this.isFixed});
+  _ImagePiecePainter({
+    required this.image,
+    required this.srcRect,
+    required this.isFixed,
+    required this.targetSize,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -238,7 +289,7 @@ class _ImagePiecePainter extends CustomPainter {
     if (isFixed) {
       paint.colorFilter = const ColorFilter.mode(Colors.green, BlendMode.modulate);
     }
-    canvas.drawImageRect(image, srcRect, Offset.zero & size, paint);
+    canvas.drawImageRect(image, srcRect, Offset.zero & targetSize, paint);
   }
 
   @override
