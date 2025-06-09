@@ -1,64 +1,54 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../widgets/puzzle_grid.dart';
 
-class PuzzleScreen extends StatelessWidget {
-  const PuzzleScreen({super.key});
+class PuzzleGrid extends StatelessWidget {
+  final int gridSize;
+  final File? imageFile;
+
+  const PuzzleGrid({required this.gridSize, this.imageFile});
 
   @override
   Widget build(BuildContext context) {
-    final String? difficulty = ModalRoute.of(context)!.settings.arguments as String?;
-    int gridSize;
-    File? imageFile;
-
-    switch (difficulty) {
-      case 'かんたん':
-        gridSize = 3;
-        break;
-      case 'ふつう':
-        gridSize = 5;
-        break;
-      case 'むずかしい':
-        gridSize = 10;
-        break;
-      default:
-        gridSize = 3;
+    if (imageFile == null) {
+      return const Center(child: Text('画像が未選択です'));
     }
 
-    Future<void> _pickImage() async {
-      final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        setState(() {
-          imageFile = File(pickedFile.path);
-        });
-      }
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Puzzle Screen'),
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: gridSize,
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.photo_library),
-          onPressed: _pickImage,
-        ),
-        IconButton(
-          icon: const Icon(Icons.undo),
-          onPressed: () {
-            // Implement undo functionality
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: () {
-            // Implement reset functionality
-          },
-        ),
-      ],
+      itemCount: gridSize * gridSize,
+      itemBuilder: (context, index) {
+        return Image.file(
+          imageFile!,
+          fit: BoxFit.cover,
+        );
+      },
+    );
+  }
+}
+
+class PuzzleScreen extends StatelessWidget {
+  final File image;
+  final int gridSize;
+
+  const PuzzleScreen({
+    required this.image,
+    required this.gridSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Puzzle Screen')),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: PuzzleGrid(gridSize: gridSize, imageFile: imageFile),
+        child: PuzzleGrid(
+          imageFile: image,
+          gridSize: gridSize,
+        ),
       ),
     );
   }
 }
+

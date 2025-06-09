@@ -1,5 +1,6 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
-import 'screens/difficulty_screen.dart';
 import 'screens/puzzle_screen.dart';
 
 void main() {
@@ -12,60 +13,50 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Navigation Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const SplashScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/difficulty': (context) => const DifficultyScreen(),
-        '/puzzle': (context) => const PuzzleScreen(),
+      title: 'Photo Puzzle',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const DifficultyScreen(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '/puzzle') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => PuzzleScreen(
+              image: args['image'],
+              gridSize: args['gridSize'],
+            ),
+          );
+        }
+        return null;
       },
     );
   }
 }
 
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+class DifficultyScreen extends StatelessWidget {
+  const DifficultyScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Splash Screen'),
-      ),
+      appBar: AppBar(title: const Text('Select Difficulty')),
       body: Center(
         child: ElevatedButton(
-          onPressed: () {
-            Navigator.pushNamed(context, '/home');
+          onPressed: () async {
+            final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+            if (pickedFile != null) {
+              Navigator.pushNamed(
+                context,
+                '/puzzle',
+                arguments: {
+                  'image': File(pickedFile.path),
+                  'gridSize': 3,
+                },
+              );
+            }
           },
-          child: const Text('Go to Home'),
+          child: const Text('Pick Image and Start Puzzle'),
         ),
       ),
     );
   }
 }
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home Screen'),
-      ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.pushNamed(context, '/difficulty');
-          },
-          child: const Text('Select Difficulty'),
-        ),
-      ),
-    );
-  }
-}
-
