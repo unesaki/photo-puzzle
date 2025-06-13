@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:io';
+import 'puzzle_piece_shape.dart';
+import '../models/puzzle_piece_model.dart';
+
 
 class PuzzleGrid extends StatefulWidget {
   final int gridSize;
@@ -18,11 +21,13 @@ class _PuzzleGridState extends State<PuzzleGrid> {
   late List<int> pieceList;
   ui.Image? image;
   List<int> history = [];
+  late List<List<PuzzlePieceShape>> pieceShapes;
 
   @override
   void initState() {
     super.initState();
     _initializeTiles();
+    pieceShapes = _generateShapes(widget.gridSize);
     _loadImage();
   }
 
@@ -257,9 +262,11 @@ class _PuzzleGridState extends State<PuzzleGrid> {
     final srcWidth = imgWidth / widget.gridSize;
     final srcHeight = imgHeight / widget.gridSize;
 
+    final shape = pieceShapes[row][col];
+
     return CustomPaint(
       size: Size(pieceWidth, pieceHeight),
-      painter: _ImagePiecePainter(
+      painter: PuzzlePiecePainter(
         image: image!,
         srcRect: Rect.fromLTWH(
           col * srcWidth,
@@ -267,37 +274,52 @@ class _PuzzleGridState extends State<PuzzleGrid> {
           srcWidth,
           srcHeight,
         ),
+        shape: shape,
         isFixed: isFixed,
-        targetSize: Size(pieceWidth, pieceHeight),
       ),
     );
   }
-}
 
-class _ImagePiecePainter extends CustomPainter {
-  final ui.Image image;
-  final Rect srcRect;
-  final bool isFixed;
-  final Size targetSize;
+  List<List<PuzzlePieceShape>> _generateShapes(int gridSize) {
+    List<List<PuzzlePieceShape>> shapes = List.generate(
+      gridSize,
+      (_) => List.generate(
+        gridSize,
+        (_) => PuzzlePieceShape(
+          top: EdgeType.flat,
+          right: EdgeType.flat,
+          bottom: EdgeType.flat,
+          left: EdgeType.flat,
+        ),
+        growable: false,
+      ),
+    );
 
-  _ImagePiecePainter({
-    required this.image,
-    required this.srcRect,
-    required this.isFixed,
-    required this.targetSize,
-  });
+    for (int row = 0; row < gridSize; row++) {
+      for (int col = 0; col < gridSize; col++) {
+        final top = row == 0 ? EdgeType.flat : _oppositeEdgeType(shapes[row - 1][col].bottom);
+        final left = col == 0 ? EdgeType.flat : _oppositeEdgeType(shapes[row][col - 1].right);
+        final right = col == gridSize - 1 ? EdgeType.flat : _randomEdgeType();
+        final bottom = row == gridSize - 1 ? EdgeType.flat : _randomEdgeType();
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-    if (isFixed) {
-      paint.colorFilter = const ColorFilter.mode(Colors.green, BlendMode.modulate);
+        shapes[row][col] = PuzzlePieceShape(top: top, right: right, bottom: bottom, left: left);
+      }
     }
-    canvas.drawImageRect(image, srcRect, Offset.zero & targetSize, paint);
+    return shapes;
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
+  EdgeType _oppositeEdgeType(EdgeType edge) {
+    switch (edge) {
+      case EdgeType.inward:
+        return EdgeType.outward;
+      case EdgeType.outward:
+        return EdgeType.inward;
+      default:
+        return EdgeType.flat;
+    }
+  }
+
+  EdgeType _randomEdgeType() {
+    return Random().nextBool() ? EdgeType.inward : EdgeType.outward;
   }
 }
