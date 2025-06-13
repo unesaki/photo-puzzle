@@ -201,27 +201,31 @@ class _PuzzleGridState extends State<PuzzleGrid> {
             },
           ),
         ),
-        // Piece List - 下部1/3（最大5つ）
+        // Piece List - 下部1/3（最大10個まで、横スクロール）
         SizedBox(
           height: pieceListHeight,
           child: Center(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: pieceList.take(5).map((piece) {
-                return Draggable<int>(
-                  data: piece,
-                  feedback: Material(
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: min(10, pieceList.length),
+              itemBuilder: (context, index) {
+                final piece = pieceList[index];
+                return Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Draggable<int>(
+                    data: piece,
+                    feedback: Material(
+                      child: _buildImagePiece(0, piece, false, pieceWidth * 0.75, pieceHeight * 0.75),
+                    ),
+                    childWhenDragging: Container(
+                      width: pieceWidth * 0.75,
+                      height: pieceHeight * 0.75,
+                      color: Colors.grey,
+                    ),
                     child: _buildImagePiece(0, piece, false, pieceWidth * 0.75, pieceHeight * 0.75),
                   ),
-                  childWhenDragging: Container(
-                    width: pieceWidth * 0.75,
-                    height: pieceHeight * 0.75,
-                    color: Colors.grey,
-                  ),
-                  child: _buildImagePiece(0, piece, false, pieceWidth * 0.75, pieceHeight * 0.75),
                 );
-              }).toList(),
+              },
             ),
           ),
         ),
